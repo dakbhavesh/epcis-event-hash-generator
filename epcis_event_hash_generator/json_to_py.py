@@ -133,6 +133,10 @@ def event_list_from_epcis_document_json(path):
     with open(path, 'r') as file:
         data = file.read()
 
+    return event_list_from_epcis_document_json_str(data)
+
+def event_list_from_epcis_document_json_str(data): 
+
     json_obj = json.loads(data)
 
     if not(json_obj.get("@context") is None):

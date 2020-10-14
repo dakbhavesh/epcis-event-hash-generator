@@ -30,6 +30,7 @@ except ImportError:
 
 from epcis_event_hash_generator.xml_to_py import event_list_from_epcis_document_xml as read_xml
 from epcis_event_hash_generator.json_to_py import event_list_from_epcis_document_json as read_json
+from epcis_event_hash_generator.json_to_py import event_list_from_epcis_document_json_str as read_jsonStr
 from epcis_event_hash_generator import PROP_ORDER
 
 
@@ -168,6 +169,37 @@ def compute_prehash_from_file(path, enforce=None):
 
     return prehash_string_list
 
+def compute_prehash_from_json_str(json, enforce=None):
+    """Read EPCIS document and generate pre-hashe strings.
+    Use enforce = "XML" or "JSON" to ignore file ending.
+    """
+
+    events = read_jsonStr(json)
+
+    logging.info("#events = %s", len(events[2]))
+    for i in range(len(events[2])):
+        logging.info("%s: %s\n", i, events[2][i])
+
+    prehash_string_list = []
+    for event in events[2]:
+        logging.debug("prehashing event:\n%s", event)
+        try:
+            prehash_string_list.append("eventType=" + event[0] +
+                                       recurse_through_children_in_order(event[2], PROP_ORDER)
+                                       + gather_elements_not_in_order(event[2], PROP_ORDER)
+                                       )
+        except Exception as ex:
+            logging.error("could not parse event:\n%s\n\nerror: %s", event, ex)
+            pass
+
+    # To see/check concatenated value string before hash algorithm is performed:
+    logging.debug("prehash_string_list = {}".format(prehash_string_list))
+
+    return prehash_string_list
+
+def epcis_hash_from_json(json, hashalg="sha256"):
+    prehash_string_list = compute_prehash_from_json_str(json)
+    return calculate_hash(prehash_string_list, hashalg)
 
 def epcis_hash(path, hashalg="sha256"):
     """Read all EPCIS Events from the EPCIS XML document at path.
@@ -177,7 +209,9 @@ def epcis_hash(path, hashalg="sha256"):
     """
     prehash_string_list = compute_prehash_from_file(path)
 
-    # Calculate hash values and prefix them according to RFC 6920
+    return calculate_hash(prehash_string_list, hashalg)
+
+def calculate_hash(prehash_string_list, hashalg="sha256"):
     hashValueList = []
     for pre_hash_string in prehash_string_list:
         if hashalg == 'sha256':
