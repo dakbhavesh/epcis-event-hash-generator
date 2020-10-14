@@ -1,0 +1,20 @@
+FROM python:3.8-alpine
+
+RUN apk --no-cache --update add bash inotify-tools curl
+
+WORKDIR /usr/src/app
+
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+
+RUN mkdir -p /events
+WORKDIR /events
+VOLUME [ "/events" ]
+# run this like 
+# docker run -v `pwd`:/events epcis-hash 
+# to start watching the current folder for json/xml files for hashing
+
+EXPOSE 5000/tcp
+
+COPY . /usr/src/app/
+ENTRYPOINT [ "/usr/src/app/webapi-starter.sh" ]
